@@ -1,0 +1,223 @@
+/* gsa for minimizing  x2+y2+z2 such that (x,y,z)e [-5 , +5] algorithm */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <dos.h>
+#include <conio.h>
+#include <math.h>
+#define D 3
+#define S 100
+#define Tmax  100
+#define alpha 5.0
+#define eps 0.001
+#define lb -5.0
+#define ub 5.0
+#define final_percent 2.0
+
+
+ struct particle
+                 {
+                  double position_x[D],velocity_x[D], acceleration[D];
+                  double mass, force[D], fitness,Mass;
+                 };
+
+ typedef struct particle particle;
+
+ struct Agent
+                {
+                 particle X[S];
+                 double best, worst;
+                };
+ typedef struct Agent Agent;
+         void initialise(Agent *pop);
+		 void fitness(Agent *pop);
+		 void Mass_calculation(Agent *pop);
+		 void force_calculation(Agent *pop, double, int);
+		 void velocity_update(Agent *pop);
+		 void position_update(Agent *pop);
+		 void sort_fitness(Agent *pop);
+
+void sort_fitness(Agent *pop)
+		 {
+         int i,j,k;
+         double swap,swap1[D];
+           for (i = 0 ; i < ( S - 1 ); i++)
+           {
+            for (j = 0 ; j < S - i - 1; j++)
+             {
+             if (pop->X[j].fitness > pop->X[j+1].fitness) /* For decreasing order use < */
+               {
+               swap       = pop->X[j].fitness;
+               pop->X[j].fitness   = pop->X[j+1].fitness;
+               pop->X[j+1].fitness = swap;
+                  for(k=0;k<D;k++)
+                  {
+                 swap1[k]=pop->X[j].position_x[k];
+                 pop->X[j].position_x[k]=pop->X[j+1].position_x[k];
+                 pop->X[j+1].position_x[k]=swap1[k];
+                  }
+                }
+               }
+
+            }//for(i=0;i<S;i++)
+            //printf("\nsortpop->X[%d].fitness=%f",i+1,pop->X[i].fitness);
+         }
+
+
+
+		 void position_update(Agent *pop)
+		 {
+              int i,j;
+              for(j=0;j<D;j++)
+              {
+               for(i=0;i<S;i++)
+                {
+                pop->X[i].position_x[j]=pop->X[i].position_x[j]+pop->X[i].velocity_x[j];
+                if(pop->X[i].position_x[j]>5.0)
+                pop->X[i].position_x[j]=ub;
+                if(pop->X[i].position_x[j]<-5.0)
+                pop->X[i].position_x[j]=lb;
+                }
+              }
+         }
+		 void velocity_update(Agent *pop)
+		 {
+              int i,j;
+              for(j=0;j<D;j++)
+               {
+                for(i=0;i<S;i++)
+                 {
+                  pop->X[i].velocity_x[j]=float(rand()/RAND_MAX)*pop->X[i].velocity_x[j]+pop->X[i].acceleration[j];
+                 }
+                }
+          }
+		 void force_calculation(Agent *pop, double G, int K)
+		 {
+           int i,j,k;
+           double sum1=0.0,f[S][K];
+           for(k=0;k<D;k++)
+           {
+            for(i=0;i<S;i++)
+             {
+             sum1=0.0;
+             for(j=0;j<K;j++)
+               {
+                if(i!=j)
+                {
+               f[i][j]=pop->X[i].Mass*pop->X[j].Mass*(pop->X[j].position_x[k]-pop->X[i].position_x[k])/sqrt(pow(pop->X[i].position_x[0]-pop->X[j].position_x[0],2.0)+pow(pop->X[i].position_x[1]-pop->X[j].position_x[1],2.0)+pow(pop->X[i].position_x[2]-pop->X[j].position_x[2],2.0));
+               sum1=sum1+f[i][j];
+               //printf("\nf[%d][%d]=%f sum1=%f",i+1,j+1,f[i][j],sum1);
+
+                }
+               }
+             pop->X[i].force[k]=sum1;
+             //printf("pop->X[%d].force[%d]=%f",i+1,k+1,pop->X[i].force[k]);
+             pop->X[i].acceleration[k]=pop->X[i].force[k]/pop->X[i].Mass;
+
+             }
+            }
+           }
+		 void Mass_calculation(Agent *pop)
+		 {
+          int i;
+          double sum=0.0;
+              for(i=0;i<S;i++)
+               {
+                pop->X[i].mass=(pop->X[i].fitness-pop->worst)/(pop->best-pop->worst)+eps;
+       	        sum=sum+pop->X[i].mass;
+       	        //printf("\npop->X[%d]=%f ",i+1,pop->X[i].mass);
+               }
+               for(i=0;i<S;i++)
+               {
+               pop->X[i].Mass=pop->X[i].mass/sum;
+               //printf("\npop->X[%d]=%f SUM=%f ",i+1,pop->X[i].Mass,sum);
+               }
+         }
+		 void fitness(Agent *pop)
+		 {
+          int i,j;
+          double Fitness1,Fitness2;
+          for(i=0;i<S;i++)
+          {
+          pop->X[i].fitness=0;
+            for(j=0;j<D;j++)
+            {
+           if(j==0)
+          pop->X[i].fitness=pop->X[i].fitness+pow(pop->X[i].position_x[j],2.0);
+
+          if(j==1)
+          pop->X[i].fitness=pop->X[i].fitness+pow(pop->X[i].position_x[j],2.0);
+          if(j==2)
+          pop->X[i].fitness=pop->X[i].fitness+pow(pop->X[i].position_x[j],2.0);
+            }
+
+          } //for(i=0;i<S;i++)
+            //printf("\npop->X[%d].fitness=%f",i+1,pop->X[i].fitness);
+          Fitness1=50000.0;
+        for(i=0;i<S;i++)//Best one selection
+              if(pop->X[i].fitness<Fitness1)
+                {
+				  Fitness1=pop->X[i].fitness;
+				  pop->best=pop->X[i].fitness;
+                }
+      Fitness2=-50000.0;
+      for(i=0;i<S;i++)//Best one selection
+              if(pop->X[i].fitness>Fitness2)
+                {
+				  Fitness2=pop->X[i].fitness;
+				  pop->worst=pop->X[i].fitness;
+                }
+        }
+
+		  void initialise(Agent *pop)
+	    {
+	        int i,j;
+	        double d;
+
+	        for(i=0;i<S;i++)
+	        {
+	         for(j=0;j<D;j++)
+	         {
+	           //d=(float)(1+(rand()%999))/100.0; // always generates a number. 0<r<10.
+	           d=(1.0+(rand()%999))/100.0;
+	           pop->X[i].position_x[j]=-5.0+d;
+	           pop->X[i].velocity_x[j]=0.0;
+
+	         }
+	        }
+	      return;
+	    }
+	    int main()
+	    {
+            int i,j,k,kbest=0;
+            double G[Tmax];
+            G[0]=-5.0;
+            FILE *fp;
+            fp=fopen("reporto.txt","w");
+            unsigned int iseed = (unsigned int)time(NULL);
+            srand (iseed);
+            Agent pop[S];
+            initialise(pop);
+
+            for(k=1;k<Tmax;k++)
+            {
+            kbest=S*(Tmax-1)/((S-1)*k-(S-Tmax));
+            G[k]=G[k-1]*exp((alpha*k/Tmax));
+            fitness(pop);
+            sort_fitness(pop);
+            Mass_calculation(pop);
+            force_calculation(pop, G[k], kbest);
+            velocity_update(pop);
+            position_update(pop);
+            if(k % 10==0)
+            {
+            for(i=0;i<S;i++)
+            //fprintf(fp,"\npop->X[%d].fitness=%f",i+1,pop->X[i].fitness);
+            fprintf(fp,"\nbest=%f worst=%f",pop->best,pop->worst);
+        }
+            } printf("Executed Suceesfully");
+            fclose(fp);
+            getch();
+                       // getch();
+        }
